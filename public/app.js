@@ -25,31 +25,36 @@ gantt.config.scales = [
 gantt.plugins({
     critical_path: true,
     marker: true,
-    fullscreen: true,
-    export_api: true
+    fullscreen: true
 });
 
 // Initialize
 gantt.init("gantt_here");
 
-// Load tasks
-fetch('/api/tasks')
-    .then(response => response.json())
-    .then(data => {
-        gantt.parse(data);
-        updateStatistics();
-        addYearClasses();
-    })
-    .catch(error => {
-        // Fallback to local tasks.json
-        fetch('/tasks.json')
-            .then(response => response.json())
-            .then(data => {
-                gantt.parse(data);
-                updateStatistics();
-                addYearClasses();
-            });
-    });
+// Load tasks with proper error handling
+function loadTasks() {
+    fetch('/api/tasks')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load tasks from API');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Tasks loaded successfully:', data.tasks ? data.tasks.length : 0, 'tasks');
+            gantt.parse(data);
+            updateStatistics();
+            addYearClasses();
+        })
+        .catch(error => {
+            console.error('Error loading tasks:', error);
+            // Show error message to user
+            alert('Error loading project data. Please refresh the page or contact support.');
+        });
+}
+
+// Load tasks on page load
+loadTasks();
 
 // Add year-specific CSS classes
 function addYearClasses() {
@@ -94,17 +99,23 @@ function zoomToFit() {
 }
 
 function exportToExcel() {
-    gantt.exportToExcel({
-        name: "westmere_factory_development.xlsx",
-        columns: [
-            { id: "text", header: "Task", width: 300 },
-            { id: "start_date", header: "Start Date", width: 150 },
-            { id: "end_date", header: "End Date", width: 150 },
-            { id: "duration", header: "Duration", width: 100 },
-            { id: "progress", header: "Progress", width: 100 },
-            { id: "priority", header: "Priority", width: 100 }
-        ]
+    // Create CSV content
+    let csvContent = "Task Name,Start Date,End Date,Duration,Progress,Priority\n";
+    
+    gantt.eachTask(function(task) {
+        csvContent += `"${task.text}",${task.start_date},${task.end_date || ''},${task.duration},${Math.round(task.progress * 100)}%,${task.priority || 'normal'}\n`;
     });
+    
+    // Download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'westmere_factory_development.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
 }
 
 function showCriticalPath() {
@@ -113,40 +124,46 @@ function showCriticalPath() {
 }
 
 function toggleFullscreen() {
-    gantt.ext.fullscreen.toggle();
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
 }
 
 function filterByYear() {
     const year = document.getElementById("yearFilter").value;
     
-    gantt.clearAll();
-    
-    fetch('/api/tasks')
-        .then(response => response.json())
-        .then(data => {
-            if (year === "all") {
-                gantt.parse(data);
-            } else {
+    if (year === "all") {
+        loadTasks();
+    } else {
+        fetch('/api/tasks')
+            .then(response => response.json())
+            .then(data => {
                 const filteredTasks = data.tasks.filter(task => {
                     const taskYear = new Date(task.start_date).getFullYear();
-                    return taskYear.toString() === year || 
-                           taskYear.toString() === (parseInt(year) + 1).toString();
+                    const yearNum = parseInt(year);
+                    return taskYear === yearNum || taskYear === (yearNum + 1);
                 });
+                
+                gantt.clearAll();
                 gantt.parse({tasks: filteredTasks, links: data.links});
-            }
-            updateStatistics();
-            addYearClasses();
-        });
+                updateStatistics();
+                addYearClasses();
+            })
+            .catch(error => {
+                console.error('Error filtering tasks:', error);
+            });
+    }
 }
 
-// Auto-save functionality
-let saveTimeout;
+// Auto-save functionality (for future implementation)
 gantt.attachEvent("onAfterTaskUpdate", function(id, task) {
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-        // In production, this would save to server
-        console.log("Task updated:", task);
-    }, 1000);
+    console.log("Task updated:", task);
+    // In production, this would save to server
+    // fetch('/api/tasks/' + id, { method: 'PUT', body: JSON.stringify(task) })
 });
 
 // Add today marker
@@ -157,3 +174,13 @@ gantt.addMarker({
     text: "Today",
     title: today.toDateString()
 });
+
+// Add custom styling for today marker
+const style = document.createElement('style');
+style.textContent = `
+    .today {
+        background-color: #ff5722;
+        opacity: 0.5;
+    }
+`;
+document.head.appendChild(style);
