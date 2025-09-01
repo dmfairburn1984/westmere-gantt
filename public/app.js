@@ -31,26 +31,57 @@ gantt.plugins({
 // Initialize
 gantt.init("gantt_here");
 
+// CORRECT URL - No .git references!
+const API_ENDPOINT = '/api/tasks';
+
 // Load tasks with proper error handling
 function loadTasks() {
-    fetch('/api/tasks')
+    console.log('Attempting to load tasks from:', API_ENDPOINT);
+    
+    fetch(API_ENDPOINT)
         .then(response => {
+            console.log('Response status:', response.status);
             if (!response.ok) {
-                throw new Error('Failed to load tasks from API');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
-            console.log('Tasks loaded successfully:', data.tasks ? data.tasks.length : 0, 'tasks');
-            gantt.parse(data);
-            updateStatistics();
-            addYearClasses();
+            console.log('Tasks loaded successfully:', data);
+            if (data && data.tasks) {
+                console.log('Number of tasks:', data.tasks.length);
+                gantt.parse(data);
+                updateStatistics();
+                addYearClasses();
+            } else {
+                console.error('Invalid data format:', data);
+            }
         })
         .catch(error => {
             console.error('Error loading tasks:', error);
-            // Show error message to user
-            alert('Error loading project data. Please refresh the page or contact support.');
+            // Try loading with a test task to ensure Gantt works
+            loadTestData();
         });
+}
+
+// Test data fallback
+function loadTestData() {
+    console.log('Loading test data as fallback...');
+    const testData = {
+        tasks: [
+            {
+                id: "test1",
+                text: "Test Task - Check tasks.json",
+                start_date: "2025-09-01",
+                duration: 5,
+                progress: 0.5,
+                type: "task"
+            }
+        ],
+        links: []
+    };
+    gantt.parse(testData);
+    alert('Failed to load project data. Showing test data. Please check that tasks.json exists in the root directory.');
 }
 
 // Load tasks on page load
@@ -93,12 +124,12 @@ function updateStatistics() {
         total > 0 ? Math.round((totalProgress / total) * 100) + "%" : "0%";
 }
 
-// Control functions
-function zoomToFit() {
+// Control functions (make them global so HTML onclick can access them)
+window.zoomToFit = function() {
     gantt.ext.zoom.zoomToFit();
 }
 
-function exportToExcel() {
+window.exportToExcel = function() {
     // Create CSV content
     let csvContent = "Task Name,Start Date,End Date,Duration,Progress,Priority\n";
     
@@ -118,12 +149,12 @@ function exportToExcel() {
     window.URL.revokeObjectURL(url);
 }
 
-function showCriticalPath() {
+window.showCriticalPath = function() {
     gantt.config.highlight_critical_path = !gantt.config.highlight_critical_path;
     gantt.render();
 }
 
-function toggleFullscreen() {
+window.toggleFullscreen = function() {
     if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen();
     } else {
@@ -133,13 +164,13 @@ function toggleFullscreen() {
     }
 }
 
-function filterByYear() {
+window.filterByYear = function() {
     const year = document.getElementById("yearFilter").value;
     
     if (year === "all") {
         loadTasks();
     } else {
-        fetch('/api/tasks')
+        fetch(API_ENDPOINT)
             .then(response => response.json())
             .then(data => {
                 const filteredTasks = data.tasks.filter(task => {
@@ -162,8 +193,6 @@ function filterByYear() {
 // Auto-save functionality (for future implementation)
 gantt.attachEvent("onAfterTaskUpdate", function(id, task) {
     console.log("Task updated:", task);
-    // In production, this would save to server
-    // fetch('/api/tasks/' + id, { method: 'PUT', body: JSON.stringify(task) })
 });
 
 // Add today marker
@@ -184,3 +213,6 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+console.log('App.js loaded successfully');
+console.log('API Endpoint:', API_ENDPOINT);
