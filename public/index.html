@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Westmere Factory Development | Vietnam Outdoor Furniture Strategy</title>
+    <link rel="stylesheet" href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <h1>WESTMERE</h1>
+                <span class="tagline">in partnership with SUMITOMO FORESTRY</span>
+            </div>
+            <div class="project-info">
+                <h2>Vietnam Factory Development Strategy</h2>
+                <span class="location">Quy Nhon, Vietnam | 2025-2029</span>
+            </div>
+        </div>
+        <div class="controls">
+            <button onclick="zoomToFit()">Zoom to Fit</button>
+            <button onclick="exportToExcel()">Export to Excel</button>
+            <button onclick="showCriticalPath()">Critical Path</button>
+            <button onclick="toggleFullscreen()">Fullscreen</button>
+            <select id="yearFilter" onchange="filterByYear()">
+                <option value="all">All Years</option>
+                <option value="2025">Year 1 (2025-2026)</option>
+                <option value="2026">Year 2 (2026-2027)</option>
+                <option value="2027">Year 3 (2027-2028)</option>
+                <option value="2028">Year 4 (2028-2029)</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="statistics">
+        <div class="stat-card">
+            <h3>Total Tasks</h3>
+            <p id="totalTasks">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Completed</h3>
+            <p id="completedTasks">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>In Progress</h3>
+            <p id="inProgressTasks">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Overall Progress</h3>
+            <p id="overallProgress">0%</p>
+        </div>
+        <div class="stat-card critical">
+            <h3>Critical Tasks</h3>
+            <p id="criticalTasks">0</p>
+        </div>
+    </div>
+    
+    <div id="gantt_here"></div>
+    
+    <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
