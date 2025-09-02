@@ -1,10 +1,10 @@
 // Initialize Gantt with enhanced configuration
 gantt.config.date_format = "%Y-%m-%d";
-gantt.config.grid_width = 500; // Increased default width
-gantt.config.row_height = 30;
+gantt.config.grid_width = 900; // Much wider grid to prevent any overlap
+gantt.config.row_height = 35; // Taller rows for better readability
 gantt.config.scale_height = 80;
 gantt.config.autosize = "y"; // Auto-adjust height
-gantt.config.autosize_min_width = 800;
+gantt.config.autosize_min_width = 1400;
 gantt.config.fit_tasks = true; // Fit tasks to screen width
 gantt.config.open_tree_initially = true; // ALWAYS open expanded
 gantt.config.scroll_on_click = true;
@@ -13,6 +13,14 @@ gantt.config.show_task_cells = true;
 gantt.config.grid_resize = true; // Enable grid resizing
 gantt.config.columns_resizable = true; // Enable column resizing
 gantt.config.columns_movable = true; // Allow column reordering
+gantt.config.indent = 20; // Set tree indentation width
+gantt.config.indent_unit = "px";
+
+// Date format templates - must be defined BEFORE column configuration
+gantt.templates.date_grid = function(date) {
+    if (!date) return "";
+    return gantt.date.date_to_str("%Y-%m-%d")(date);
+};
 
 // Configure columns with better sizing and resizing capabilities
 gantt.config.columns = [
@@ -20,50 +28,64 @@ gantt.config.columns = [
         name: "text", 
         label: "Task name", 
         tree: true, 
-        width: 300, // Increased width
-        min_width: 200, // Minimum width when resizing
-        max_width: 500, // Maximum width when resizing
-        resize: true // Enable resize for this column
+        width: 450, // Even wider to accommodate tree and text
+        min_width: 400,
+        max_width: 700,
+        resize: true,
+        template: function(task) {
+            // Just return the text, let CSS handle the display
+            return task.text || "";
+        }
     },
     {
         name: "start_date", 
-        label: "Start", 
+        label: "Start Date", 
         align: "center", 
-        width: 90,
-        min_width: 80,
-        resize: true
+        width: 150, // Wider still for dates
+        min_width: 140,
+        resize: true,
+        template: function(task) {
+            if (!task.start_date) return "";
+            return gantt.templates.date_grid(task.start_date);
+        }
     },
     {
         name: "duration", 
         label: "Days", 
         align: "center", 
-        width: 50,
-        min_width: 40,
+        width: 70,
+        min_width: 60,
         resize: true
     },
     {
         name: "progress", 
         label: "Progress", 
         align: "center", 
-        width: 80,
-        min_width: 60,
+        width: 100,
+        min_width: 80,
         resize: true,
         template: function(task) {
-            return Math.round(task.progress * 100) + "%";
+            return Math.round((task.progress || 0) * 100) + "%";
         }
     },
     {
         name: "priority",
         label: "Priority",
         align: "center",
-        width: 70,
-        min_width: 60,
+        width: 90,
+        min_width: 80,
         resize: true,
         template: function(task) {
             return task.priority || "normal";
         }
     }
 ];
+
+// Date format templates
+gantt.templates.date_grid = function(date) {
+    if (!date) return "";
+    return gantt.date.date_to_str("%Y-%m-%d")(date);
+};
 
 // Configure scales for better visibility
 gantt.config.scales = [
@@ -72,12 +94,27 @@ gantt.config.scales = [
     {unit: "week", step: 1, format: "Week %W"}
 ];
 
+// Additional text visibility settings
+gantt.config.autofit = false; // Don't auto-shrink columns
+gantt.config.readonly = false; // Allow interactions
+gantt.config.smart_scales = true; // Smart scale rendering
+gantt.config.min_column_width = 70; // Minimum width for any column
+gantt.config.scale_offset_minimal = false; // Show full scale
+
 // Enable all required plugins
 gantt.plugins({
     critical_path: true,
     marker: true,
     fullscreen: true,
-    export_api: true, // Enable export functionality
+    multiselect: true,
+    tooltip: true
+});
+
+// Enable all required plugins
+gantt.plugins({
+    critical_path: true,
+    marker: true,
+    fullscreen: true,
     multiselect: true,
     tooltip: true
 });
@@ -119,6 +156,9 @@ function loadTasks() {
                     gantt.open(task.id);
                 });
                 
+                // Auto-adjust column widths based on content
+                adjustColumnWidths();
+                
                 // Update statistics
                 updateStatistics();
                 
@@ -138,6 +178,39 @@ function loadTasks() {
             console.error('Error loading tasks:', error);
             loadTestData();
         });
+}
+
+// Function to auto-adjust column widths based on content
+function adjustColumnWidths() {
+    // Find the longest task name accounting for tree structure
+    let maxTaskNameLength = 0;
+    gantt.eachTask(function(task) {
+        // Account for tree indentation (20px per level) plus icon space
+        const level = task.$level || 0;
+        const indentWidth = (level * 20) + 30; // 20px per level + 30px for icons
+        const textLength = (task.text || '').length * 8 + indentWidth + 60; // Add extra buffer
+        maxTaskNameLength = Math.max(maxTaskNameLength, textLength);
+    });
+    
+    // Update the text column width if needed
+    const columns = gantt.config.columns;
+    if (columns && columns[0] && columns[0].name === 'text') {
+        // Set to calculated width but within min/max bounds
+        const newWidth = Math.min(Math.max(maxTaskNameLength, 450), 700);
+        columns[0].width = newWidth;
+        
+        // Update grid width to accommodate all columns
+        let totalWidth = 0;
+        columns.forEach(col => {
+            totalWidth += col.width || 100;
+        });
+        gantt.config.grid_width = Math.max(totalWidth + 30, 900); // Add padding
+    }
+    
+    // Force gantt to recalculate layout
+    if (gantt.$container) {
+        gantt.render();
+    }
 }
 
 // Function to scroll to today's date
@@ -236,170 +309,186 @@ window.zoomToFit = function() {
     gantt.showDate(new Date());
 }
 
-// PDF Export Function
+// PDF Export Function - Simplified and working
 window.exportToPDF = function() {
-    console.log('Exporting to PDF...');
+    console.log('Starting PDF export...');
     
-    // Configure PDF export options
-    const exportConfig = {
-        name: "Westmere_Factory_Development_" + new Date().toISOString().split('T')[0] + ".pdf",
-        format: "A4",
-        orientation: "landscape",
-        header: "<h2>Westmere Factory Development Strategy - Vietnam 2025-2029</h2>",
-        footer: "<p>Page {pageNum} of {pageCount} - Generated: " + new Date().toLocaleString() + "</p>",
-        server: "https://export.dhtmlx.com/gantt",
-        raw: false,
-        callback: function(result) {
-            if (result && result.url) {
-                // Download the PDF
-                const link = document.createElement('a');
-                link.href = result.url;
-                link.download = "Westmere_Gantt_" + new Date().toISOString().split('T')[0] + ".pdf";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } else {
-                // Fallback: Export visible area as image
-                exportVisibleAreaAsPDF();
-            }
-        }
-    };
-    
-    // Try to use DHTMLX export service
-    if (gantt.exportToPDF) {
-        gantt.exportToPDF(exportConfig);
-    } else {
-        // Fallback method if export service is not available
-        exportVisibleAreaAsPDF();
-    }
-}
-
-// Fallback PDF export using browser print
-function exportVisibleAreaAsPDF() {
-    // Store original title
-    const originalTitle = document.title;
-    
-    // Set title for PDF
-    document.title = "Westmere Factory Development - " + new Date().toLocaleDateString();
-    
-    // Add print-specific styles
-    const printStyles = document.createElement('style');
-    printStyles.id = 'print-styles';
-    printStyles.innerHTML = `
-        @media print {
-            body * { visibility: hidden; }
-            #gantt_here, #gantt_here * { visibility: visible; }
-            #gantt_here { 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 100%; 
-                height: auto;
-            }
-            .header { display: none !important; }
-            .statistics { display: none !important; }
-            .controls { display: none !important; }
-        }
-    `;
-    document.head.appendChild(printStyles);
-    
-    // Trigger print dialog (user can save as PDF)
-    window.print();
-    
-    // Clean up
-    setTimeout(() => {
-        document.title = originalTitle;
-        const printStyleElement = document.getElementById('print-styles');
-        if (printStyleElement) {
-            printStyleElement.remove();
-        }
-    }, 1000);
-}
-
-// Enhanced Excel Export with hierarchy preservation
-window.exportToExcel = function() {
-    console.log('Exporting to Excel with full Gantt structure...');
-    
-    // Try to use DHTMLX export service first
-    if (gantt.exportToExcel) {
-        gantt.exportToExcel({
-            name: "Westmere_Factory_Development_" + new Date().toISOString().split('T')[0] + ".xlsx",
-            columns: [
-                { id: "text", header: "Task Name", width: 300 },
-                { id: "start_date", header: "Start Date", width: 120 },
-                { id: "end_date", header: "End Date", width: 120 },
-                { id: "duration", header: "Duration (days)", width: 100 },
-                { id: "progress", header: "Progress %", width: 100 },
-                { id: "priority", header: "Priority", width: 100 },
-                { id: "parent", header: "Parent Task", width: 150 },
-                { id: "notes", header: "Notes", width: 300 }
-            ],
-            server: "https://export.dhtmlx.com/gantt",
-            visual: true,
-            cellColors: true,
-            callback: function(result) {
-                if (!result || !result.url) {
-                    // Fallback to custom export
-                    exportToExcelCustom();
+    // Method 1: Use browser's print dialog (most reliable)
+    const printWindow = function() {
+        // Store original title
+        const originalTitle = document.title;
+        document.title = "Westmere Factory Development - " + new Date().toLocaleDateString();
+        
+        // Create a print-specific style
+        const printStyle = document.createElement('style');
+        printStyle.id = 'pdf-print-styles';
+        printStyle.innerHTML = `
+            @media print {
+                body { 
+                    background: white !important; 
+                    margin: 0;
+                    padding: 0;
+                }
+                .header { 
+                    page-break-after: avoid;
+                    background: white !important;
+                    padding: 10px !important;
+                }
+                .controls { display: none !important; }
+                .statistics { 
+                    page-break-after: avoid;
+                    padding: 10px !important;
+                }
+                #gantt_here { 
+                    margin: 0 !important;
+                    padding: 10px !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    min-width: 100% !important;
+                }
+                .gantt_grid_scale,
+                .gantt_grid_data,
+                .gantt_task {
+                    background: white !important;
                 }
             }
-        });
+            @page {
+                size: landscape;
+                margin: 0.5in;
+            }
+        `;
+        document.head.appendChild(printStyle);
+        
+        // Trigger print
+        setTimeout(() => {
+            window.print();
+            
+            // Cleanup
+            setTimeout(() => {
+                document.title = originalTitle;
+                const styleEl = document.getElementById('pdf-print-styles');
+                if (styleEl) styleEl.remove();
+            }, 100);
+        }, 500);
+    };
+    
+    // Try the dhtmlx export first, fallback to print
+    if (window.gantt && gantt.exportToPDF) {
+        try {
+            gantt.exportToPDF({
+                name: "Westmere_Gantt_" + new Date().toISOString().split('T')[0] + ".pdf",
+                format: "A4",
+                orientation: "landscape",
+                header: "Westmere Factory Development Strategy",
+                footer: "Generated: " + new Date().toLocaleString()
+            });
+        } catch (e) {
+            console.log('DHTMLX export failed, using print dialog...');
+            printWindow();
+        }
     } else {
-        // Use custom export method
-        exportToExcelCustom();
+        printWindow();
     }
 }
 
-// Custom Excel export with hierarchy
-function exportToExcelCustom() {
-    let csvContent = "Level,Task ID,Task Name,Start Date,End Date,Duration (days),Progress %,Priority,Status,Notes,Parent\n";
+// Enhanced Excel Export - Simplified and working
+window.exportToExcel = function() {
+    console.log('Starting Excel export...');
     
-    // Helper function to get task level
-    function getTaskLevel(task) {
-        let level = 0;
-        let parent = task.parent;
-        while (parent && parent !== 0) {
-            level++;
-            parent = gantt.getTask(parent).parent;
+    // Build CSV content with proper structure
+    let csvContent = "Task Name,Start Date,End Date,Duration (days),Progress %,Priority,Status,Parent Task,Notes\n";
+    
+    // Helper function to escape CSV values
+    function escapeCSV(value) {
+        if (value === null || value === undefined) return '';
+        const str = String(value);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return '"' + str.replace(/"/g, '""') + '"';
         }
-        return level;
+        return str;
     }
     
-    // Export tasks in hierarchical order
-    function exportTask(taskId, indent = "") {
-        const task = gantt.getTask(taskId);
-        const level = getTaskLevel(task);
-        const endDate = gantt.calculateEndDate(task.start_date, task.duration);
-        const status = task.progress >= 1 ? "Completed" : task.progress > 0 ? "In Progress" : "Not Started";
-        const parentName = task.parent ? gantt.getTask(task.parent).text : "";
-        
-        // Add indentation to task name for hierarchy
-        const indentedName = "  ".repeat(level) + task.text;
-        
-        csvContent += `${level},"${task.id}","${indentedName}",${task.start_date},${gantt.templates.date_format(endDate)},${task.duration},${Math.round(task.progress * 100)},${task.priority || 'normal'},${status},"${task.notes || ''}","${parentName}"\n`;
-        
-        // Export children
-        const children = gantt.getChildren(taskId);
-        children.forEach(childId => exportTask(childId, indent + "  "));
+    // Helper function to get indentation
+    function getIndent(level) {
+        return '  '.repeat(level);
     }
     
-    // Get root tasks and export hierarchically
-    gantt.eachTask(function(task) {
-        if (!task.parent || task.parent === 0) {
-            exportTask(task.id);
-        }
-    }, 0);
+    // Helper function to format date
+    function formatDate(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
     
-    // Download CSV file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'Westmere_Factory_Gantt_' + new Date().toISOString().split('T')[0] + '.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    // Process all tasks in hierarchical order
+    function processTask(taskId, level = 0) {
+        try {
+            const task = gantt.getTask(taskId);
+            const endDate = gantt.calculateEndDate(task.start_date, task.duration);
+            const status = task.progress >= 1 ? "Completed" : 
+                          task.progress > 0 ? "In Progress" : "Not Started";
+            const parentTask = task.parent && task.parent !== 0 ? 
+                              gantt.getTask(task.parent).text : "";
+            
+            // Add task to CSV with indentation
+            const taskName = getIndent(level) + task.text;
+            const startDate = formatDate(task.start_date);
+            const endDateStr = formatDate(endDate);
+            const progress = Math.round(task.progress * 100);
+            const priority = task.priority || 'normal';
+            const notes = task.notes || '';
+            
+            csvContent += [
+                escapeCSV(taskName),
+                escapeCSV(startDate),
+                escapeCSV(endDateStr),
+                task.duration,
+                progress,
+                escapeCSV(priority),
+                escapeCSV(status),
+                escapeCSV(parentTask),
+                escapeCSV(notes)
+            ].join(',') + '\n';
+            
+            // Process children
+            const children = gantt.getChildren(taskId);
+            children.forEach(childId => {
+                processTask(childId, level + 1);
+            });
+        } catch (e) {
+            console.error('Error processing task:', taskId, e);
+        }
+    }
+    
+    // Get all root tasks and process
+    try {
+        gantt.eachTask(function(task) {
+            if (!task.parent || task.parent === 0) {
+                processTask(task.id, 0);
+            }
+        }, 0);
+        
+        // Create and download the file
+        const BOM = '\uFEFF'; // UTF-8 BOM for Excel compatibility
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'Westmere_Gantt_Export_' + new Date().toISOString().split('T')[0] + '.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        console.log('Excel export completed successfully');
+    } catch (error) {
+        console.error('Excel export failed:', error);
+        alert('Export failed. Please try again.');
+    }
 }
 
 // Show/hide critical path
@@ -443,6 +532,9 @@ window.filterByYear = function() {
                     gantt.open(task.id);
                 });
                 
+                // Auto-adjust column widths for filtered content
+                adjustColumnWidths();
+                
                 updateStatistics();
                 addYearClasses();
                 gantt.render();
@@ -481,11 +573,42 @@ style.textContent = `
     .gantt_task_row.gantt_selected .gantt_task_cell {
         background-color: #fff3cd;
     }
-    /* Ensure task text is visible */
+    /* Fix tree indentation and text visibility */
     .gantt_tree_content {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow: visible !important;
+        text-overflow: initial !important;
+        white-space: normal !important;
+        word-wrap: break-word;
+        padding-right: 15px;
+        padding-left: 5px;
+        line-height: 1.4;
+        display: inline-block;
+        width: calc(100% - 25px);
+    }
+    /* Ensure tree icons don't overlap text */
+    .gantt_tree_icon {
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+    .gantt_tree_indent {
+        display: inline-block;
+        width: 20px;
+    }
+    /* Fix cell content display */
+    .gantt_cell_tree {
+        overflow: visible !important;
+        position: relative;
+    }
+    .gantt_cell_tree .gantt_tree_content {
+        position: relative;
+        z-index: 1;
+    }
+    /* Ensure date columns show full dates */
+    .gantt_cell[data-column-name="start_date"] {
+        white-space: nowrap !important;
+        font-size: 13px;
+        padding: 4px 8px !important;
+        overflow: visible !important;
     }
     /* Tooltip styling */
     .gantt_tooltip {
@@ -494,7 +617,8 @@ style.textContent = `
         padding: 10px;
         border-radius: 5px;
         font-size: 12px;
-        max-width: 300px;
+        max-width: 400px;
+        z-index: 10000;
     }
     /* Column resize handle */
     .gantt_grid_head_cell .gantt_grid_head_cell_resize_wrapper {
@@ -502,6 +626,19 @@ style.textContent = `
         position: absolute;
         width: 10px;
         margin-left: -5px;
+    }
+    /* Ensure grid cells have proper padding */
+    .gantt_grid_data .gantt_cell {
+        padding: 6px 10px;
+        overflow: visible !important;
+    }
+    /* Row height adjustment for better text visibility */
+    .gantt_task_row, .gantt_row {
+        min-height: 35px !important;
+    }
+    /* Fix date display */
+    .gantt_date {
+        white-space: nowrap !important;
     }
 `;
 document.head.appendChild(style);
@@ -529,6 +666,21 @@ gantt.config.keyboard_navigation_cells = true;
 // Load tasks when page is ready
 document.addEventListener('DOMContentLoaded', function() {
     loadTasks();
+    
+    // Add resize handler to maintain column visibility
+    window.addEventListener('resize', function() {
+        if (gantt.$container) {
+            gantt.render();
+            adjustColumnWidths();
+        }
+    });
+    
+    // Ensure columns are resizable by user
+    gantt.attachEvent("onColumnResize", function(ind, column, new_width){
+        // Save user's preferred width
+        console.log("Column resized:", column.name, "New width:", new_width);
+        return true;
+    });
 });
 
 // Auto-refresh every 5 minutes (optional)
