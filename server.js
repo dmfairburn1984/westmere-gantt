@@ -1,16 +1,16 @@
 const express = require('express');
-const path = require('path');
+const path = require('path');  // Only declared ONCE at the top
 const basicAuth = require('express-basic-auth');
+const fs = require('fs');  // Add this for file reading
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Read credentials from environment variables
-// Default credentials for Westmere/SFC
 const BASIC_USER = process.env.BASIC_USER || 'westmere';
 const BASIC_PASS = process.env.BASIC_PASS || 'sfc-vietnam-2025';
 
-// Apply Basic Auth BEFORE serving static files.
+// Apply Basic Auth BEFORE serving static files
 app.use(
   basicAuth({
     users: { [BASIC_USER]: BASIC_PASS },
@@ -28,18 +28,17 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-const fs = require('fs');
-const path = require('path');
-
+// API endpoint to get tasks - FIXED VERSION
 app.get('/api/tasks', (req, res) => {
   try {
     const tasksPath = path.join(__dirname, 'tasks.json');
+    console.log('Reading tasks from:', tasksPath);
     const tasksData = fs.readFileSync(tasksPath, 'utf8');
     const tasks = JSON.parse(tasksData);
     res.json(tasks);
   } catch (error) {
     console.error('Error loading tasks:', error);
-    res.status(500).json({ error: 'Failed to load tasks' });
+    res.status(500).json({ error: 'Failed to load tasks', details: error.message });
   }
 });
 
