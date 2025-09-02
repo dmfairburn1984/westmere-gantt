@@ -25,7 +25,8 @@ gantt.config.scales = [
 gantt.plugins({
     critical_path: true,
     marker: true,
-    fullscreen: true
+    fullscreen: true,
+    zoom: true  //
 });
 
 // Initialize
@@ -34,13 +35,14 @@ gantt.init("gantt_here");
 // CORRECT URL - No .git references!
 const API_ENDPOINT = '/api/tasks';
 
-// Load tasks with proper error handling
 function loadTasks() {
     console.log('Attempting to load tasks from:', API_ENDPOINT);
+    console.log('Current URL:', window.location.href);  // ← Add this
     
     fetch(API_ENDPOINT)
         .then(response => {
             console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);  // ← Add this
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -48,6 +50,8 @@ function loadTasks() {
         })
         .then(data => {
             console.log('Tasks loaded successfully:', data);
+            console.log('Data type:', typeof data);  // ← Add this
+            console.log('Data keys:', Object.keys(data));  // ← Add this
             if (data && data.tasks) {
                 console.log('Number of tasks:', data.tasks.length);
                 gantt.parse(data);
@@ -59,11 +63,10 @@ function loadTasks() {
         })
         .catch(error => {
             console.error('Error loading tasks:', error);
-            // Try loading with a test task to ensure Gantt works
+            console.error('Error stack:', error.stack);  // ← Add this
             loadTestData();
         });
 }
-
 // Test data fallback
 function loadTestData() {
     console.log('Loading test data as fallback...');
@@ -124,9 +127,16 @@ function updateStatistics() {
         total > 0 ? Math.round((totalProgress / total) * 100) + "%" : "0%";
 }
 
-// Control functions (make them global so HTML onclick can access them)
 window.zoomToFit = function() {
-    gantt.ext.zoom.zoomToFit();
+    try {
+        if (gantt.ext && gantt.ext.zoom) {
+            gantt.ext.zoom.zoomToFit();
+        } else {
+            console.error('Zoom extension not available');
+        }
+    } catch (error) {
+        console.error('Errofunction loadTasks() {r with zoom:', error);
+    }
 }
 
 window.exportToExcel = function() {

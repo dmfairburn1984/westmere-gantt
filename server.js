@@ -28,10 +28,14 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// API endpoint to get tasks
+const fs = require('fs');
+const path = require('path');
+
 app.get('/api/tasks', (req, res) => {
   try {
-    const tasks = require('./tasks.json');
+    const tasksPath = path.join(__dirname, 'tasks.json');
+    const tasksData = fs.readFileSync(tasksPath, 'utf8');
+    const tasks = JSON.parse(tasksData);
     res.json(tasks);
   } catch (error) {
     console.error('Error loading tasks:', error);
