@@ -1,10 +1,10 @@
 // Initialize Gantt with enhanced configuration
 gantt.config.date_format = "%Y-%m-%d";
-gantt.config.grid_width = 900; // Much wider grid to prevent any overlap
+gantt.config.grid_width = 935; // Sum of all column widths plus padding
 gantt.config.row_height = 35; // Taller rows for better readability
 gantt.config.scale_height = 80;
 gantt.config.autosize = "y"; // Auto-adjust height
-gantt.config.autosize_min_width = 1400;
+gantt.config.autosize_min_width = 1450;
 gantt.config.fit_tasks = true; // Fit tasks to screen width
 gantt.config.open_tree_initially = true; // ALWAYS open expanded
 gantt.config.scroll_on_click = true;
@@ -28,7 +28,7 @@ gantt.config.columns = [
         name: "text", 
         label: "Task name", 
         tree: true, 
-        width: 450, // Even wider to accommodate tree and text
+        width: 440, // Slightly adjusted for balance
         min_width: 400,
         max_width: 700,
         resize: true,
@@ -53,16 +53,16 @@ gantt.config.columns = [
         name: "duration", 
         label: "Days", 
         align: "center", 
-        width: 70,
-        min_width: 60,
+        width: 85, // Wider to ensure no wrapping of header or content
+        min_width: 75,
         resize: true
     },
     {
         name: "progress", 
         label: "Progress", 
         align: "center", 
-        width: 100,
-        min_width: 80,
+        width: 105, // Slightly wider for header
+        min_width: 85,
         resize: true,
         template: function(task) {
             return Math.round((task.progress || 0) * 100) + "%";
@@ -72,8 +72,8 @@ gantt.config.columns = [
         name: "priority",
         label: "Priority",
         align: "center",
-        width: 90,
-        min_width: 80,
+        width: 105, // Wider to ensure no wrapping
+        min_width: 95,
         resize: true,
         template: function(task) {
             return task.priority || "normal";
@@ -196,7 +196,7 @@ function adjustColumnWidths() {
     const columns = gantt.config.columns;
     if (columns && columns[0] && columns[0].name === 'text') {
         // Set to calculated width but within min/max bounds
-        const newWidth = Math.min(Math.max(maxTaskNameLength, 450), 700);
+        const newWidth = Math.min(Math.max(maxTaskNameLength, 440), 700);
         columns[0].width = newWidth;
         
         // Update grid width to accommodate all columns
@@ -204,7 +204,7 @@ function adjustColumnWidths() {
         columns.forEach(col => {
             totalWidth += col.width || 100;
         });
-        gantt.config.grid_width = Math.max(totalWidth + 30, 900); // Add padding
+        gantt.config.grid_width = Math.max(totalWidth + 30, 935); // Updated to match new base width
     }
     
     // Force gantt to recalculate layout
@@ -609,6 +609,19 @@ style.textContent = `
         font-size: 13px;
         padding: 4px 8px !important;
         overflow: visible !important;
+    }
+    /* Force Days and Priority columns to NEVER wrap */
+    .gantt_cell[data-column-name="duration"],
+    .gantt_grid_head_cell[column_id="duration"] {
+        white-space: nowrap !important;
+        min-width: 80px !important;
+        text-align: center !important;
+    }
+    .gantt_cell[data-column-name="priority"],
+    .gantt_grid_head_cell[column_id="priority"] {
+        white-space: nowrap !important;
+        min-width: 100px !important;
+        text-align: center !important;
     }
     /* Tooltip styling */
     .gantt_tooltip {
