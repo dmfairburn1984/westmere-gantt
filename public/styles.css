@@ -1,4 +1,17 @@
-* {
+/* Gantt grid container settings */
+.gantt_grid {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+}
+
+.gantt_grid_scale {
+    overflow: visible !important;
+}
+
+.gantt_grid_data {
+    overflow-x: visible !important;
+    overflow-y: auto !important;
+}* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -8,6 +21,8 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
+    min-width: 1200px; /* Prevent content compression */
+    overflow-x: auto; /* Allow horizontal scroll if needed */
 }
 
 .header {
@@ -118,12 +133,14 @@ body {
 
 #gantt_here {
     height: calc(100vh - 280px);
+    min-height: 500px;
     background: white;
     margin: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 20px rgba(0,0,0,0.1);
     padding: 10px;
-    overflow: hidden;
+    overflow: auto;
+    min-width: 1200px; /* Ensure minimum width for all columns */
 }
 
 /* Custom Gantt Styles */
@@ -164,14 +181,58 @@ body {
     background: #f8f9fa;
     border-right: 1px solid #ddd;
     position: relative;
+    padding: 8px 10px;
+    white-space: nowrap;
+    overflow: visible !important;
 }
 
 /* Task text styling to prevent cutoff */
 .gantt_tree_content {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible !important;
+    text-overflow: initial !important;
+    white-space: normal !important;
+    padding-right: 10px;
+    line-height: 1.4;
+}
+
+/* Ensure grid cells have enough height for wrapped text */
+.gantt_cell, .gantt_grid_head_cell {
+    overflow: visible !important;
+    padding: 6px 8px !important;
+}
+
+/* Grid data cells - ensure proper text display */
+.gantt_grid_data .gantt_cell {
     white-space: nowrap;
-    padding-right: 5px;
+    overflow: visible !important;
+    text-overflow: initial !important;
+}
+
+/* Special handling for text column to allow wrapping */
+.gantt_cell[data-column-name="text"] {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+/* Date and numeric columns - no wrapping */
+.gantt_cell[data-column-name="start_date"],
+.gantt_cell[data-column-name="duration"],
+.gantt_cell[data-column-name="progress"],
+.gantt_cell[data-column-name="priority"] {
+    white-space: nowrap !important;
+}
+
+/* Task name column specific styling */
+.gantt_cell_tree {
+    padding-left: 5px;
+    padding-right: 10px;
+}
+
+/* Date columns - ensure full visibility */
+.gantt_cell.gantt_date {
+    white-space: nowrap !important;
+    overflow: visible !important;
 }
 
 .gantt_task_row.gantt_selected .gantt_task_cell,
