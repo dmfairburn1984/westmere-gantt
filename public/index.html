@@ -20,11 +20,12 @@
             </div>
         </div>
         <div class="controls">
-            <button onclick="zoomToFit()">Zoom to Fit</button>
-            <button onclick="exportToExcel()">Export to Excel</button>
-            <button onclick="showCriticalPath()">Critical Path</button>
-            <button onclick="toggleFullscreen()">Fullscreen</button>
-            <select id="yearFilter" onchange="filterByYear()">
+            <button onclick="zoomToFit()" title="Zoom to show entire project">Zoom to Fit</button>
+            <button onclick="exportToExcel()" title="Export to Excel with full hierarchy">Export to Excel</button>
+            <button onclick="exportToPDF()" title="Export current view to PDF">Export to PDF</button>
+            <button onclick="showCriticalPath()" title="Toggle critical path highlighting">Critical Path</button>
+            <button onclick="toggleFullscreen()" title="Enter/exit fullscreen mode">Fullscreen</button>
+            <select id="yearFilter" onchange="filterByYear()" title="Filter tasks by year">
                 <option value="all">All Years</option>
                 <option value="2025">Year 1 (2025-2026)</option>
                 <option value="2026">Year 2 (2026-2027)</option>
@@ -59,7 +60,11 @@
     
     <div id="gantt_here"></div>
     
+    <!-- Load DHTMLX Gantt library with export extension -->
     <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
+    <!-- Optional: Load export client for better export functionality -->
+    <script src="https://export.dhtmlx.com/gantt/api/js/gantt-export.js"></script>
+    <!-- Load your enhanced app.js -->
     <script src="app.js"></script>
 </body>
 </html>
